@@ -1,0 +1,114 @@
+[project]
+name = "bg3mpcc"
+description = "Simple tool that checks for conflicting startup.json files in Baldur's Gate 3 mods and outputs a report"
+version = "0.1.0"
+authors = [{ name = "Rykari" }]
+maintainers = [{ name = "Rykari" }]
+readme = { file = "README.md", content-type = "text/markdown" }
+requires-python = ">=3.11"
+dependencies = [
+    "pandas>=2.2.3",
+    "openpyxl>=3.1.5",
+    "pandas>=2.2.3",
+    "structlog>=24.4.0",
+    "orjson>=3.10.10",
+    "rich>=13.9.3",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Programming Language :: Python",
+]
+
+[project.scripts]
+start = "scripts:build_checker"
+
+[tool.uv]
+dev-dependencies = ["ruff>=0.7.0"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build]
+include = ["src/**/*"]
+
+[tool.ruff]
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".git-rewrite",
+    ".hg",
+    ".ipynb_checkpoints",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pyenv",
+    ".pytest_cache",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    ".vscode",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "site-packages",
+    "venv",
+]
+line-length = 100
+indent-width = 4
+fix = true
+include = ["*.py", "*.toml"]
+
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    # Depreciated
+    "ANN101", # Missing type annotation for function argument {name}
+    # Bugged
+    "D205",   # 1 blank line required between summary line and description - bugged
+    "RET505", # Missing elif after return - bugged
+    "D401",   # Imperitive mood comments - bugged
+    # Personal preference
+    ## Type checking blocks
+    "TCH001",
+    "TCH002",
+    "TCH003",
+    "D107",    # Missing docstring in __init__, I get why but inits should explain themselves
+    "ERA001",  # Sometimes I want commented out code
+    "T201",    # I'll always remove this in prod anyway
+    "E501",    # Line too long for docstrings
+    "PD901",   # complaining about 'df' as a variable name
+    "D202",    # No blank lines allowed after function docstring
+    "N803",    # argument name should be lowercase
+    "N806",    # variable in function should be lowercase
+    "D107",    # Missing docstring in __init__
+    "C408",    # Using dict or list instead of literal
+    "F403",    # undefined-local-with-import-star 
+    "TID252",  # local imports
+    "PLR0913", # Too many arguments in function definition (6 > 5)
+    "N815",    # Shouldn't be in Mixed case
+]
+fixable = ["ALL"]
+unfixable = [
+    "F401", # I dont wish to remove unused imports during development
+]
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+docstring-code-format = false
+docstring-code-line-length = "dynamic"
