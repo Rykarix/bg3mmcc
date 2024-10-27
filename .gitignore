@@ -134,3 +134,5 @@ cython_debug/
 *.lock
 
 .logs/
+data/conflict_analysis/*
+data/settings_json/*

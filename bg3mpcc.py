@@ -13,10 +13,8 @@ class BG3ConflictChecker:
     """Checks for conflicting mods setup by vortex by analysing the `startup.json` file."""
 
     _folder_with_json_files: Path = Path().cwd() / "data" / "settings_json"
-    _folder_with_cleaned_files: Path = Path().cwd() / "data" / "settings_cleaned"
     _json_filepaths: ClassVar[list[Path]] = list(_folder_with_json_files.glob("**/*.json"))
     _folder_with_json_files.mkdir(parents=True, exist_ok=True)
-    _folder_with_cleaned_files.mkdir(parents=True, exist_ok=True)
     _dataframe: pd.DataFrame = pd.DataFrame()
     _filtered_dataframe: pd.DataFrame = pd.DataFrame()
 
@@ -26,9 +24,6 @@ class BG3ConflictChecker:
         try:
             self.tabulate_json_files()
             self.duplicate_checker()
-            self._jcleaned_filepaths: list[Path] = list(
-                self._folder_with_cleaned_files.glob("**/*.json"),
-            )
             self.conflict_filter()
         except Exception:
             log.exception(
@@ -36,7 +31,7 @@ class BG3ConflictChecker:
             )
 
     def idiot_checker(self) -> None:
-        """Checks for comm-HERP DERP DERP!!!- mistakes."""
+        """Checks for mi-HERP DERP DERP!!!- stakes."""
         if not self._json_filepaths:
             log.exception(
                 error_hint="Is the data folder empty?",
@@ -82,11 +77,6 @@ class BG3ConflictChecker:
             filename = startup_file.name.split(".")[0]
             tmp = self.get_data(file_path=startup_file).sort_values(by="fileMD5")
             tmp["player"] = filename
-            tmp.to_json(
-                self._folder_with_cleaned_files / f"{filename}.json",
-                orient="records",
-                indent=2,
-            )
             self._dataframe = pd.concat([self._dataframe, tmp], axis=0)
 
     def conflict_filter(self) -> pd.DataFrame:
@@ -101,7 +91,7 @@ class BG3ConflictChecker:
         non_matching_fileMD5s = pivot_table[(pivot_table != 1).any(axis=1)].index
         self._filtered_dataframe = self._dataframe[
             self._dataframe["fileMD5"].isin(non_matching_fileMD5s)
-        ]
+        ].sort_values(by="customFileName")
 
     def get_data(self, file_path: str) -> pd.DataFrame:
         """Perform ETL on a single `startup.json` file."""
@@ -144,43 +134,56 @@ class BG3ConflictChecker:
 
     def save_all_conflicts(
         self,
-        filetype: Literal["html", "xlsx", "csv"] = "xlsx",
     ) -> None:
         """Save a report showing all conflicts between each players `startup.json` file."""
-        tmp = pd.DataFrame()
-        for e, url in enumerate(self._filtered_dataframe["homepage"]):
-            row_data = self._dataframe[self._dataframe.homepage == url].copy()
-            issue_number = f"Issue {e}"
-            row_data.loc[:, "issue"] = issue_number
-            tmp = pd.concat([tmp, row_data], axis=0)
-        output: pd.DataFrame = tmp[
-            [
-                "fileName",
-                "fileMD5",
-                "modVersion",  # for some ungodly reason there are 2 version fields, where occaisionally they don't match?? lol@nexus
-                "version",  # for some ungodly reason there are 2 version fields, where occaisionally they don't match?? lol@nexus
-                "homepage",
-                "issue",
-                "player",
-                "customFileName",  # Another example of duplicated fields
-                "modName",  # Another example of duplicated fields
-            ]
-        ].set_index(
-            [
-                "issue",
-                "player",
-                "fileName",
-                "fileMD5",
-            ],
-        )
-        filename = f"conflicts.{filetype}"
-        if filetype == "html":
-            output.to_html(filename)
-        elif filetype == "xlsx":
-            output.to_excel(filename, engine="openpyxl")
-        elif filetype == "csv":
-            output.to_csv(filename)
-        log.info("Saved conflicts to: %s ", Path.cwd() / filename-)
+        host_filename = self._hosts_file
+        host_dataframe = self._dataframe[self._dataframe["player"] == host_filename]
+        host_list = host_dataframe[host_dataframe["state"] == "installed"]["homepage"].tolist()
+        cols2rem = [
+            "player",
+            "fileSize",
+            "fileMD5",
+            "state",
+            "downloadGame",
+            "type",
+            "isPrimary",
+            "modId",
+        ]
+        # host_dataframe = host_dataframe.drop(columns=cols2rem)
+        conflict_folder = Path.cwd() / "data" / "conflict_analysis"
+        conflict_folder.mkdir(parents=True, exist_ok=True)
+        for player in self._dataframe["player"].unique().tolist():
+            if player == host_filename:
+                continue
+            conflict_dataframe: pd.DataFrame = self._dataframe[self._dataframe["player"] == player]
+            conflict_list: list = conflict_dataframe[conflict_dataframe["state"] == "installed"][
+                "homepage"
+            ].tolist()
+            # compare the two lists and find the differences
+            diff = list(set(conflict_list) - set(host_list))
+            conflict_df = (
+                conflict_dataframe[conflict_dataframe["homepage"].isin(diff)]
+                .drop(
+                    columns=cols2rem,
+                )
+                .dropna()
+                .reset_index(drop=True)
+                .sort_values(by="customFileName")
+                .set_index("customFileName")
+            )
+            if not conflict_df.empty:
+                log.warning(
+                    "Found %s conflicting mods between the host, %s, and player, %s ",
+                    conflict_df.shape[0],
+                    host_filename,
+                    player,
+                )
+                filename = conflict_folder / f"conflicts_{player}.csv"
+                conflict_df.to_csv(filename, header=True)
+                log.info(
+                    "File conflicts have been saved to: %s ",
+                    (Path.cwd() / filename).relative_to(Path.cwd()),
+                )
 
 
 if __name__ == "__main__":
@@ -191,11 +194,6 @@ if __name__ == "__main__":
         log_types=["dev"],
     )
     checker = BG3ConflictChecker(
-        hosts_file="player1.json",
+        hosts_file="plsnomoar.json",  # this is the name of the hosts state backups json file
     )
-    # excel looks neater as it can handle multi-indexed dataframes
     checker.save_all_conflicts()
-
-    # # there are also csv and html options whatever is easier
-    # checker.save_all_conflicts("csv")
-    # checker.save_all_conflicts("html")
