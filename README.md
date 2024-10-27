@@ -2,7 +2,7 @@
 
 ## Installation instructions
 
-1. Extract the zip file to a folder
+1. Extract the zip file to a folder / clone as required
 2. Open your terminal / powershell and cd to the folder
    - for example if you extracted bg3mpcc to this folder: `C:\BG3\bg3mpcc` run `cd C:\BG3\bg3mpcc`
 3. Install [uv](https://docs.astral.sh/uv/getting-started/installation/) by:
