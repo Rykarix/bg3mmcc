@@ -52,3 +52,8 @@ Each file that conflicts with the host will have a list of conflicting mods save
 - GUI
 - Additional validation checks
 - Possibility of networking checker for further automation
+
+
+## License
+
+This project is licensed under the [GNU General Public License v3.0](./LICENSE).
