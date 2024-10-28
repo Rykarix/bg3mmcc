@@ -31,6 +31,7 @@ This is very much still a work in progress project. If errors occur they will bo
 ┣━━ 📂 src
 ┃   ┗━━ 📂 logs
 ┃       ┗━━ handler.py (9.5 kB)
+┣━━ LICENSE (35.8 kB)
 ┣━━ bg3mpcc.py (9.3 kB)
 ┣━━ pyproject.toml (3.0 kB)
 ┣━━ README.md (1.5 kB)
