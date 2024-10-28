@@ -231,6 +231,5 @@ if __name__ == "__main__":
         help="The name of the host's state backup JSON file.",
     )
     args = parser.parse_args()
-
     checker = BG3ConflictChecker(hosts_file=args.hosts_file)
     checker.save_all_conflicts()
