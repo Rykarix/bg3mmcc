@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
 from collections import defaultdict
 from pathlib import Path
-from typing import ClassVar, Literal
+from typing import ClassVar
 
 import pandas as pd
 
@@ -25,8 +26,16 @@ class BG3ConflictChecker:
             self.tabulate_json_files()
             self.duplicate_checker()
             self.conflict_filter()
+        except ValueError:
+            log.exception(
+                "Error parsing json files",
+                error_hint="Is the json file from [b]%userprofile%\\AppData\\Roaming\\Vortex\\temp\\state_backups_full\\settings\\settings.json[/b]?",
+                exit=True,
+            )
         except Exception:
             log.exception(
+                "An exception occured",
+                error_hint="If you see this message, please copy paste the full error message and send it to the developer.",
                 exit=True,
             )
 
@@ -34,14 +43,34 @@ class BG3ConflictChecker:
         """Checks for mi-HERP DERP DERP!!!- stakes."""
         if not self._json_filepaths:
             log.exception(
+                "No files found",
                 error_hint="Is the data folder empty?",
                 expected_folderpath=self._folder_with_json_files.absolute(),
                 exit=True,
             )
         if len(self._json_filepaths) == 1:
             log.exception(
+                "Not enough files to compare",
                 error_hint="o.O? You need at least 2 files to compare.",
                 files_found=self._json_filepaths,
+                exit=True,
+            )
+        if not self._hosts_file:
+            log.exception(
+                "No host's file provided",
+                error_hint="Please provide the name of the host's state backup JSON file.",
+                exit=True,
+            )
+
+        hosts_file: str = f"{self._hosts_file}.json"
+        list_of_filenames: list[str] = [file.name for file in self._json_filepaths]
+        is_file_in_list: bool = hosts_file in list_of_filenames
+
+        if not is_file_in_list:
+            log.exception(
+                "No host's file found",
+                error_hint=f"Host's file not found in the list of files. {self._json_filepaths}",
+                files_found=list_of_filenames,
                 exit=True,
             )
 
@@ -193,7 +222,15 @@ if __name__ == "__main__":
         level="DEBUG",
         log_types=["dev"],
     )
-    checker = BG3ConflictChecker(
-        hosts_file="plsnomoar.json",  # this is the name of the hosts state backups json file
+
+    parser = argparse.ArgumentParser(description="BG3 Conflict Checker")
+    parser.add_argument(
+        "--hosts-file",
+        type=str,
+        required=True,
+        help="The name of the host's state backup JSON file.",
     )
+    args = parser.parse_args()
+
+    checker = BG3ConflictChecker(hosts_file=args.hosts_file)
     checker.save_all_conflicts()

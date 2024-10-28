@@ -17,7 +17,7 @@
 1. Each player should upload their startup.json file from `%userprofile%\AppData\Roaming\Vortex\temp\state_backups_full\`. Just throw it in a discord chat or something
 2. Place all of them into the `/data/settings_json` folder
    - I would recommend renaming each file to a sensible and recognisable name, for eg `plsnomoar.json`, `bear.json`, `secks.json` etc. Only use strings for the name, no spaces or special characters.
-3. Run the script with the expected arguments
+3. Run the script with the expected arguments: `uv run bg3mmcc.py --hosts-file="YOUR_SETTINGS_FILENAME.json"
 
 
 Each file that conflicts with the host will have a list of conflicting mods saved in `data/conflict_analysis`
