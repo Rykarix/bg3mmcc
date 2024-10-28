@@ -136,3 +136,4 @@ cython_debug/
 .logs/
 data/conflict_analysis/*
 data/settings_json/*
+src/helpers/
