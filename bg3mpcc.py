@@ -4,7 +4,7 @@ import hashlib
 import json
 from collections import defaultdict
 from pathlib import Path
-from typing import ClassVar, Literal
+from typing import ClassVar
 
 import pandas as pd
 
@@ -95,11 +95,40 @@ class BG3ConflictChecker:
 
     def get_data(self, file_path: str) -> pd.DataFrame:
         """Perform ETL on a single `startup.json` file."""
+        filename = Path(file_path).name
         tmp = pd.DataFrame(pd.read_json(file_path, orient="index").mods.iloc[1])
         tmp = tmp.reset_index().rename(columns={"index": "modname"})
 
         baldursgate_expanded = tmp.pop("baldursgate3").apply(pd.Series)
         tmp = pd.concat([tmp, baldursgate_expanded], axis=1)
+
+        # NOTE: A player reported a bug where, for whatever reason, vortex was returning data for mods containing no data in "attributes".
+        # Additionally, it appeared to have remembered this fragmented data from a previous profile... The following code should warn users if this has happened:
+        invalid_entries = [
+            (file_name, attr_dict)
+            for file_name, attr_dict in zip(tmp["modname"], tmp["attributes"], strict=False)
+            if not isinstance(attr_dict, dict)
+        ]
+        if invalid_entries:
+            invalid_modnames = "\n    ".join(
+                f'"modname": "{file_name}"' for file_name, _ in invalid_entries
+            )
+            log.warning(
+                "No attribute data for entries in `%s`. Entries:\n    %s",
+                filename,
+                invalid_modnames,
+            )
+            log.warning(
+                """This shouldn't happen. Nor should it really cause an issue with your game.
+Possible reasons for it happening are:
+    1 you didn't create a new profile as instructed
+    2 vortex has left remnant data from a previous profile (which has been known to happen).
+Possible Solutions are:
+    1. Try re-creating your vortex mod profile into a new profile (all you need to do is follow the defaults as suggested by the mod creator).
+    2. Try a clean install of vortex. This shouldn't cause too much trouble, since your mods will already be downloaded however you will have to follow the vortex setup guide again.""",
+            )
+
+        tmp = tmp.dropna(subset=["attributes"])
 
         all_keys = list({key for attr_dict in tmp["attributes"] for key in attr_dict})
 
@@ -149,7 +178,6 @@ class BG3ConflictChecker:
             "isPrimary",
             "modId",
         ]
-        # host_dataframe = host_dataframe.drop(columns=cols2rem)
         conflict_folder = Path.cwd() / "data" / "conflict_analysis"
         conflict_folder.mkdir(parents=True, exist_ok=True)
         for player in self._dataframe["player"].unique().tolist():
@@ -171,9 +199,12 @@ class BG3ConflictChecker:
                 .sort_values(by="customFileName")
                 .set_index("customFileName")
             )
+
+            # if self._INVALID_ENTRIES_FOUND:
+
             if not conflict_df.empty:
                 log.warning(
-                    "Found %s conflicting mods between the host, %s, and player, %s ",
+                    "Found %s conflicting mods between the host: '%s' and player: '%s' ",
                     conflict_df.shape[0],
                     host_filename,
                     player,
@@ -184,16 +215,29 @@ class BG3ConflictChecker:
                     "File conflicts have been saved to: %s ",
                     (Path.cwd() / filename).relative_to(Path.cwd()),
                 )
+            else:
+                log.info(
+                    "No conflicts found between the host: '%s' and player: '%s' ",
+                    host_filename,
+                    player,
+                )
 
 
 if __name__ == "__main__":
+    import argparse
+
     from src.logs.handler import configure_logging
 
-    log = configure_logging(
-        level="DEBUG",
-        log_types=["dev"],
+    log = configure_logging(level="DEBUG", log_types=["dev"])
+
+    parser = argparse.ArgumentParser(description="BG3 Conflict Checker")
+    parser.add_argument(
+        "--hosts_file",
+        type=str,
+        required=True,
+        help="Name of the host's state backups JSON file",
     )
-    checker = BG3ConflictChecker(
-        hosts_file="plsnomoar.json",  # this is the name of the hosts state backups json file
-    )
+    args = parser.parse_args()
+
+    checker = BG3ConflictChecker(hosts_file=args.hosts_file)
     checker.save_all_conflicts()
