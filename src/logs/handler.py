@@ -106,6 +106,12 @@ class CustomBoundLogger(structlog.stdlib.BoundLogger):
             kw["exit"] = exit
         if not event:
             event = "An exception occurred."
+        # Check if an exception is currently being handled
+        if "exc_info" not in kw or kw["exc_info"]:
+            if sys.exc_info() == (None, None, None):
+                kw["exc_info"] = False
+            else:
+                kw["exc_info"] = True
         # FIXME: This will throw an error if the event is None
         super().exception(event, *args, **kw)
 
